@@ -162,6 +162,13 @@ func (dp *PCIDevicePlugin) Started() bool {
 }
 
 func (dp *PCIDevicePlugin) Stop() error {
+	if !dp.starter.started {
+		return nil
+	}
+
+	close(dp.starter.stopChan)
+	dp.starter.started = false
+
 	return dp.stopDevicePlugin()
 }
 
