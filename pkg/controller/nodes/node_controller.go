@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/jaypipes/ghw"
@@ -24,6 +25,8 @@ import (
 	ctl "github.com/harvester/pcidevices/pkg/generated/controllers/devices.harvesterhci.io/v1beta1"
 	"github.com/harvester/pcidevices/pkg/util/nichelper"
 )
+
+var locker *sync.Mutex
 
 const (
 	defaultRequeuePeriod = 30 * time.Second
@@ -48,6 +51,11 @@ type handler struct {
 	usbClaimCtl                ctl.USBDeviceClaimController
 	virtClient                 kubecli.KubevirtClient
 	migConfigurationController ctl.MigConfigurationController
+	locker                     sync.Locker
+}
+
+func SetLocker(l *sync.Mutex) {
+	locker = l
 }
 
 const (
@@ -98,6 +106,9 @@ func (h *handler) reconcileNodeDevices(name string, node *v1beta1.Node) (*v1beta
 	if node == nil || node.DeletionTimestamp != nil || node.Name != h.nodeName {
 		return node, nil
 	}
+
+	locker.Lock()
+	defer locker.Unlock()
 
 	pci, err := ghw.PCI()
 	if err != nil {

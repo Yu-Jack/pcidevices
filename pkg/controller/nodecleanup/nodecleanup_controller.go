@@ -3,6 +3,7 @@ package nodecleanup
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	corecontrollers "github.com/rancher/wrangler/v3/pkg/generated/controllers/core/v1"
 	"github.com/sirupsen/logrus"
@@ -13,6 +14,8 @@ import (
 	"github.com/harvester/pcidevices/pkg/config"
 	"github.com/harvester/pcidevices/pkg/generated/controllers/devices.harvesterhci.io/v1beta1"
 )
+
+var locker *sync.Mutex
 
 const (
 	wranglerFinalizer = "wrangler.cattle.io/PCIDeviceClaimOnRemove"
@@ -35,6 +38,9 @@ func (h *Handler) OnRemove(_ string, node *v1.Node) (*v1.Node, error) {
 	if node == nil || node.DeletionTimestamp == nil {
 		return node, nil
 	}
+
+	locker.Lock()
+	defer locker.Unlock()
 
 	cleanupFuncs := []func(*v1.Node) error{
 		h.removePCIDeviceClaimsOnNode,
@@ -265,4 +271,8 @@ func (h *Handler) removeNodeObject(node *v1.Node) error {
 		}
 	}
 	return nil
+}
+
+func SetLocker(l *sync.Mutex) {
+	locker = l
 }

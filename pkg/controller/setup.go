@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/rancher/lasso/pkg/cache"
@@ -120,6 +121,9 @@ func Setup(ctx context.Context, cfg *rest.Config, _ *runtime.Scheme) error {
 		virtualmachine.Register,
 	}
 
+	locker := &sync.Mutex{}
+	nodes.SetLocker(locker)
+	nodecleanup.SetLocker(locker)
 	for _, register := range registers {
 		if err := register(ctx, management); err != nil {
 			return fmt.Errorf("error registering controller: %v", err)
