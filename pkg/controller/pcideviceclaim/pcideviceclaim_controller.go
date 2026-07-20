@@ -537,6 +537,7 @@ func reconcileKubevirtCR(kvObj *kubevirtv1.KubeVirt, pd *v1beta1.PCIDevice) *kub
 		if permittedPCIDev.ResourceName == resourceName {
 			if permittedPCIDev.ExternalResourceProvider {
 				devPermitted = true
+				break
 			}
 			// remove device so it can be re-added
 			permittedPCIDevices = append(permittedPCIDevices[:i], permittedPCIDevices[i+1:]...)
