@@ -1,7 +1,6 @@
 package pcideviceclaim
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -26,6 +25,7 @@ import (
 	"github.com/harvester/pcidevices/pkg/deviceplugins"
 	v1beta1gen "github.com/harvester/pcidevices/pkg/generated/controllers/devices.harvesterhci.io/v1beta1"
 	"github.com/harvester/pcidevices/pkg/iommu"
+	modulesutil "github.com/harvester/pcidevices/pkg/util/modules"
 )
 
 var (
@@ -189,31 +189,7 @@ func checkVFIOModules() (bool, error) {
 
 // checkModulesExists checks the /proc/modules file to see if a module exists
 func checkModulesExists(filename string, modules []string) (bool, error) {
-	fd, err := os.Open(filename)
-	if err != nil {
-		return false, fmt.Errorf("failed to open /proc/modules: %v", err)
-	}
-	defer fd.Close()
-
-	mark := map[string]struct{}{}
-	scanner := bufio.NewScanner(fd)
-	for scanner.Scan() {
-		line := scanner.Text()
-		for _, module := range modules {
-			if strings.Contains(line, module) {
-				mark[module] = struct{}{}
-			}
-		}
-		if len(mark) == len(modules) {
-			return true, nil
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return false, fmt.Errorf("failed to read /proc/modules: %v", err)
-	}
-
-	return false, nil
+	return modulesutil.Exists(filename, modules)
 }
 
 func bindDeviceToVFIOPCIDriver(pd *v1beta1.PCIDevice) error {

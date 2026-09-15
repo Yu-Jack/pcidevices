@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/rancher/lasso/pkg/cache"
@@ -21,8 +22,11 @@ import (
 	"kubevirt.io/client-go/kubecli"
 
 	ctlnetwork "github.com/harvester/harvester-network-controller/pkg/generated/controllers/network.harvesterhci.io"
+	ctlharvester "github.com/harvester/harvester/pkg/generated/controllers/harvesterhci.io"
 
+	devicesv1beta1 "github.com/harvester/pcidevices/pkg/apis/devices.harvesterhci.io/v1beta1"
 	"github.com/harvester/pcidevices/pkg/config"
+	"github.com/harvester/pcidevices/pkg/controller/componenthealth"
 	"github.com/harvester/pcidevices/pkg/controller/gpudevice"
 	"github.com/harvester/pcidevices/pkg/controller/nodecleanup"
 	"github.com/harvester/pcidevices/pkg/controller/nodes"
@@ -85,6 +89,13 @@ func Setup(ctx context.Context, cfg *rest.Config, _ *runtime.Scheme) error {
 		return fmt.Errorf("error building network controllers: %v", err)
 	}
 
+	harvesterFactory, err := ctlharvester.NewFactoryFromConfigWithOptions(cfg, &ctlharvester.FactoryOptions{
+		SharedControllerFactory: factory,
+	})
+	if err != nil {
+		return fmt.Errorf("error building harvester controllers: %v", err)
+	}
+
 	kubevirtFactory, err := ctlkubevirt.NewFactoryFromConfigWithOptions(cfg, &ctlkubevirt.FactoryOptions{
 		SharedControllerFactory: factory,
 	})
@@ -100,6 +111,7 @@ func Setup(ctx context.Context, cfg *rest.Config, _ *runtime.Scheme) error {
 
 	management := config.NewFactoryManager(
 		deviceFactory,
+		harvesterFactory,
 		coreFactory,
 		networkFactory,
 		kubevirtFactory,
@@ -113,6 +125,9 @@ func Setup(ctx context.Context, cfg *rest.Config, _ *runtime.Scheme) error {
 
 	registers := []func(context.Context, *config.FactoryManager) error{
 		pcideviceclaim.Register,
+		func(ctx context.Context, management *config.FactoryManager) error {
+			return componenthealth.Register(ctx, management.HarvesterFactory, os.Getenv(devicesv1beta1.NodeEnvVarName))
+		},
 		usbdevice.Register,
 		nodes.Register,
 		sriovdevice.Register,
@@ -135,7 +150,7 @@ func Setup(ctx context.Context, cfg *rest.Config, _ *runtime.Scheme) error {
 		<-ctx.Done()
 	})
 
-	if err := start.All(ctx, 2, coreFactory, networkFactory, deviceFactory, kubevirtFactory); err != nil {
+	if err := start.All(ctx, 2, coreFactory, networkFactory, deviceFactory, kubevirtFactory, harvesterFactory); err != nil {
 		return fmt.Errorf("error starting controllers :%v", err)
 	}
 

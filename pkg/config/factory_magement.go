@@ -1,6 +1,7 @@
 package config
 
 import (
+	ctlharvester "github.com/harvester/harvester/pkg/generated/controllers/harvesterhci.io"
 	ctlcore "github.com/rancher/wrangler/v3/pkg/generated/controllers/core"
 	"k8s.io/client-go/rest"
 	"kubevirt.io/client-go/kubecli"
@@ -12,10 +13,11 @@ import (
 )
 
 type FactoryManager struct {
-	DeviceFactory   *ctldevices.Factory
-	CoreFactory     *ctlcore.Factory
-	NetworkFactory  *ctlnetwork.Factory
-	KubevirtFactory *ctlkubevirt.Factory
+	DeviceFactory    *ctldevices.Factory
+	HarvesterFactory *ctlharvester.Factory
+	CoreFactory      *ctlcore.Factory
+	NetworkFactory   *ctlnetwork.Factory
+	KubevirtFactory  *ctlkubevirt.Factory
 
 	KubevirtClient kubecli.KubevirtClient
 	Cfg            *rest.Config
@@ -23,6 +25,7 @@ type FactoryManager struct {
 
 func NewFactoryManager(
 	deviceFactory *ctldevices.Factory,
+	harvesterFactory *ctlharvester.Factory,
 	coreFactory *ctlcore.Factory,
 	networkFactory *ctlnetwork.Factory,
 	kubevirtFactory *ctlkubevirt.Factory,
@@ -30,11 +33,12 @@ func NewFactoryManager(
 	cfg *rest.Config,
 ) *FactoryManager {
 	return &FactoryManager{
-		DeviceFactory:   deviceFactory,
-		CoreFactory:     coreFactory,
-		NetworkFactory:  networkFactory,
-		KubevirtFactory: kubevirtFactory,
-		KubevirtClient:  kubevirtClient,
-		Cfg:             cfg,
+		DeviceFactory:    deviceFactory,
+		HarvesterFactory: harvesterFactory,
+		CoreFactory:      coreFactory,
+		NetworkFactory:   networkFactory,
+		KubevirtFactory:  kubevirtFactory,
+		KubevirtClient:   kubevirtClient,
+		Cfg:              cfg,
 	}
 }
